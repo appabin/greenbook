@@ -2,10 +2,19 @@ package main
 
 import (
 	"fmt"
+	"log"
+
+	"github.com/appabin/greenbook/config"
 )
 
 func main() {
-	fmt.Println("Hello, playground")
-	var arr = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	fmt.Println(arr)
+	config.InitConfig()
+
+	log.Println("=== 配置加载成功 ===")
+	fmt.Printf("应用名称: %s\n", config.AppConfig.App.Name)
+	fmt.Printf("应用端口: %s\n", config.AppConfig.App.Port)
+
+	// r := router.SetupRouter()
+
+	// r.Run(":" + config.AppConfig.App.Port)
 }
