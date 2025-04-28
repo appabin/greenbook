@@ -1,0 +1,15 @@
+package models
+
+import "time"
+
+// UserFollow 用户关系模型（关注/粉丝）
+type UserFollow struct {
+	FollowerID uint      `gorm:"primaryKey;index" json:"follower_id"` // 关注者ID
+	FollowedID uint      `gorm:"primaryKey;index" json:"followed_id"` // 被关注者ID
+	CreatedAt  time.Time `json:"created_at"`                          // 创建时间
+}
+
+// TableName 设置表名
+func (UserFollow) TableName() string {
+	return "user_follows"
+}

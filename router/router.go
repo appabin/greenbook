@@ -9,46 +9,56 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	auth := r.Group("api/auth")
+	// 认证相关路由组
+	authGroup := r.Group("/api/auth")
 	{
-		auth.POST("/login", controllers.Login)
-		auth.POST("/register", controllers.Register)
+		authGroup.POST("/login", controllers.Login)              // 网页登录
+		authGroup.POST("/register", controllers.Register)        // 网页注册
+		authGroup.POST("/wechat-login", controllers.WeChatLogin) // 微信登录（新增）
 	}
 
-	// 微信小程序相关路由
-	wx := r.Group("api/wx")
+	// // 公共API路由组（无需认证）
+	// apiPublic := r.Group("/api")
+	// {
+	// 	// 文章公开接口
+	// 	articlePublic := apiPublic.Group("/articles")
+	// 	{
+	// 		articlePublic.GET("", controllers.ArticleController.List)    // 文章列表
+	// 		articlePublic.GET("/:id", controllers.ArticleController.Get) // 文章详情
+	// 	}
+	// }
+
+	// // 受保护API路由组（需要JWT认证）
+	apiProtected := r.Group("/api")
+	apiProtected.Use(middlewares.AuthMiddleWare()) // 统一应用认证中间件
 	{
-		wx.POST("/login", controllers.WechatLogin)
-	}
+		// 	// 文章操作接口
+		// 	articleProtected := apiProtected.Group("/articles")
+		// 	{
+		// 		articleProtected.POST("", controllers.ArticleController.Create)              // 创建文章
+		// 		articleProtected.PUT("/:id", controllers.ArticleController.Update)           // 更新文章
+		// 		articleProtected.DELETE("/:id", controllers.ArticleController.Delete)        // 删除文章
+		// 		articleProtected.POST("/:id/like", controllers.ArticleController.ToggleLike) // 点赞操作
 
-	api := r.Group("api")
+		// 		// 评论相关子组
+		// 		commentsGroup := articleProtected.Group("/:id/comments")
+		// 		{
+		// 			commentsGroup.POST("", controllers.ArticleController.CreateComment)               // 发表评论
+		// 			commentsGroup.DELETE("/:comment_id", controllers.ArticleController.DeleteComment) // 删除评论
+		// 		}
+		// 	}
 
-	// 文章相关路由
-	articleController := &controllers.ArticleController{}
-	articles := api.Group("/articles")
-	{
-		// 无需登录的路由
-		articles.GET("", articleController.List)    // 获取文章列表
-		articles.GET("/:id", articleController.Get) // 获取文章详情
-
-		// 需要登录的路由
-		auth := articles.Use(middlewares.AuthMiddleWare())
+		// 	// 用户社交功能（保持注释状态，待实现）
+		// 	// apiProtected.POST("/follow/:id", controllers.FollowUser)
+		// 	// apiProtected.DELETE("/follow/:id", controllers.UnfollowUser)
+		// 	// apiProtected.GET("/followings", controllers.GetFollowings)
+		// 	// apiProtected.GET("/followers", controllers.GetFollowers)
+		followGroup := apiProtected.Group("/follow")
 		{
-			auth.POST("", articleController.Create)                     // 创建文章
-			auth.PUT("/:id", articleController.Update)                  // 更新文章
-			auth.DELETE("/:id", articleController.Delete)               // 删除文章
-			auth.POST("/:id/like", articleController.ToggleLike)        // 点赞/取消点赞
-			auth.POST("/:id/comments", articleController.CreateComment) // 发表评论
+			followGroup.POST("", controllers.FollowAction)              // 关注/取消关注
+			followGroup.GET("/following", controllers.GetFollowingList) // 关注列表
+			followGroup.GET("/followers", controllers.GetFollowersList) // 粉丝列表
 		}
 	}
-
-	api.Use(middlewares.AuthMiddleWare())
-	{
-		// api.POST("/follow/:id", controllers.FollowUser)     // 关注用户
-		// api.DELETE("/follow/:id", controllers.UnfollowUser) // 取消关注
-		// api.GET("/followings", controllers.GetFollowings)   // 获取关注列表
-		// api.GET("/followers", controllers.GetFollowers)     // 获取粉丝列表
-	}
-
 	return r
 }

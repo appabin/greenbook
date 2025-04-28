@@ -1,31 +1,29 @@
 package utils
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-
-	"github.com/appabin/greenbook/config"
 )
 
-// Code2Session 微信登录凭证校验
-// WechatCode2SessionResponse 微信登录凭证校验返回结果
-type WechatCode2SessionResponse struct {
-	OpenID     string `json:"openid"`      // 用户唯一标识
-	SessionKey string `json:"session_key"` // 会话密钥
-	UnionID    string `json:"unionid"`     // 用户在开放平台的唯一标识符
-	ErrCode    int    `json:"errcode"`     // 错误码
-	ErrMsg     string `json:"errmsg"`      // 错误信息
+// WeChatSessionResponse 微信会话响应结构
+type WeChatSessionResponse struct {
+	OpenID     string `json:"openid"`
+	SessionKey string `json:"session_key"`
+	UnionID    string `json:"unionid"`
+	ErrCode    int    `json:"errcode"`
+	ErrMsg     string `json:"errmsg"`
 }
 
-func Code2Session(code string) (*WechatCode2SessionResponse, error) {
-	appID := config.AppConfig.Wechat.AppID
-	appSecret := config.AppConfig.Wechat.AppSecret
-
-	url := fmt.Sprintf(
-		"https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-		appID, appSecret, code,
-	)
+// GetWeChatSession 通过code获取微信会话信息
+func GetWeChatSession(appID, appSecret, code string) (*WeChatSessionResponse, error) {
+	url := fmt.Sprintf("https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+		appID, appSecret, code)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -33,14 +31,46 @@ func Code2Session(code string) (*WechatCode2SessionResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var wxResp WechatCode2SessionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&wxResp); err != nil {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
 
-	if wxResp.ErrCode != 0 {
-		return nil, fmt.Errorf("微信接口错误：%s", wxResp.ErrMsg)
+	var sessionRes WeChatSessionResponse
+	if err := json.Unmarshal(body, &sessionRes); err != nil {
+		return nil, err
 	}
 
-	return &wxResp, nil
+	if sessionRes.ErrCode != 0 {
+		return nil, errors.New(sessionRes.ErrMsg)
+	}
+
+	return &sessionRes, nil
+}
+
+// DecryptWeChatData 解密微信加密数据
+func DecryptWeChatData(sessionKey, encryptedData, iv string) (map[string]interface{}, error) {
+	// Base64解码
+	key, _ := base64.StdEncoding.DecodeString(sessionKey)
+	cipherText, _ := base64.StdEncoding.DecodeString(encryptedData)
+	ivBytes, _ := base64.StdEncoding.DecodeString(iv)
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	mode := cipher.NewCBCDecrypter(block, ivBytes)
+	mode.CryptBlocks(cipherText, cipherText)
+
+	// 去除填充
+	pad := int(cipherText[len(cipherText)-1])
+	decrypted := cipherText[:len(cipherText)-pad]
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(decrypted, &result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
