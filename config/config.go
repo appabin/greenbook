@@ -12,6 +12,12 @@ type Config struct {
 		Name string `mapstructure:"name"`
 		Port string `mapstructure:"port"`
 	} `mapstructure:"app"`
+	
+	Wechat struct {
+		AppID     string `mapstructure:"app_id"`
+		AppSecret string `mapstructure:"app_secret"`
+	} `mapstructure:"wechat"`
+	
 	Database struct {
 		Dsn           string `mapstructure:"dsn"`
 		MaxIdleConns  int

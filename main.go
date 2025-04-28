@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/appabin/greenbook/router"
+
 	"github.com/appabin/greenbook/config"
 )
 
@@ -14,7 +16,7 @@ func main() {
 	fmt.Printf("应用名称: %s\n", config.AppConfig.App.Name)
 	fmt.Printf("应用端口: %s\n", config.AppConfig.App.Port)
 
-	// r := router.SetupRouter()
+	r := router.SetupRouter()
 
-	// r.Run(":" + config.AppConfig.App.Port)
+	r.Run(":" + config.AppConfig.App.Port)
 }

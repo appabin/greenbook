@@ -30,7 +30,8 @@ func initDB() {
 	// 执行自动迁移
 	err = db.AutoMigrate(
 		&models.User{},
-		// &models.Article{},
+		&models.UserRelation{},
+		&models.Article{}, &models.Tag{}, &models.Like{}, &models.Comment{},
 		// &models.Comment{},
 		// &models.Tag{},
 		// &models.UserFollow{},

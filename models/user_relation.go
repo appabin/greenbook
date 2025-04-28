@@ -5,6 +5,7 @@ import (
 )
 
 // UserRelation 用户关注关系模型
+// @Description 用户关注关系
 type UserRelation struct {
 	gorm.Model
 	FollowerID uint `gorm:"index:idx_follower;comment:关注者ID" json:"follower_id"`  // 粉丝ID
