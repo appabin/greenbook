@@ -1,3 +1,4 @@
+basePath: /api
 definitions:
   controllers.CreateArticleRequest:
     properties:
@@ -29,6 +30,18 @@ definitions:
     required:
     - content
     type: object
+  controllers.FollowRequest:
+    properties:
+      action:
+        description: '1: 关注, 0: 取消关注'
+        type: integer
+      user_id:
+        description: 要关注/取消关注的用户ID
+        type: integer
+    required:
+    - action
+    - user_id
+    type: object
   controllers.LoginRequest:
     properties:
       password:
@@ -52,7 +65,10 @@ definitions:
       username:
         type: string
     required:
+    - email
+    - nickname
     - password
+    - phone
     - username
     type: object
   controllers.UpdateArticleRequest:
@@ -71,28 +87,25 @@ definitions:
         example: 更新后的标题
         type: string
     type: object
-  controllers.WechatLoginRequest:
+  controllers.WeChatLoginRequest:
     properties:
-      avatarUrl:
-        type: string
-      city:
-        type: string
       code:
+        description: 微信登录code
         type: string
-      country:
+      encryptedData:
+        description: 加密数据（首次登录需要）
         type: string
-      gender:
-        type: integer
-      language:
+      iv:
+        description: 解密向量（首次登录需要）
         type: string
-      nickname:
-        type: string
-      province:
+      phone:
+        description: 明文手机号（备用）
         type: string
     required:
     - code
     type: object
   models.Article:
+    description: 文章信息
     properties:
       author:
         allOf:
@@ -136,6 +149,7 @@ definitions:
         type: string
     type: object
   models.Comment:
+    description: 评论信息
     properties:
       article:
         allOf:
@@ -174,6 +188,7 @@ definitions:
         type: integer
     type: object
   models.Like:
+    description: 点赞信息
     properties:
       article:
         allOf:
@@ -195,6 +210,7 @@ definitions:
         type: integer
     type: object
   models.Tag:
+    description: 标签信息
     properties:
       articles:
         description: 关联的文章
@@ -216,15 +232,7 @@ definitions:
     properties:
       avatar:
         type: string
-      city:
-        type: string
-      country:
-        type: string
       created_at:
-        description: 创建时间
-        type: string
-      deleted_at:
-        description: 删除时间
         type: string
       email:
         type: string
@@ -236,13 +244,7 @@ definitions:
       gender:
         type: integer
       id:
-        description: 用户ID
         type: integer
-      language:
-        type: string
-      last_login_at:
-        description: 额外的时间字段
-        type: string
       nickname:
         type: string
       open_id:
@@ -254,20 +256,28 @@ definitions:
         type: string
       posts_count:
         type: integer
-      province:
-        type: string
       session_key:
         type: string
       union_id:
         type: string
       updated_at:
-        description: 更新时间
         type: string
       username:
         type: string
     type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Greenbook社交博客平台API文档
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Greenbook API
+  version: "1.0"
 paths:
   /api/articles:
     get:
@@ -452,6 +462,135 @@ paths:
       summary: 点赞文章
       tags:
       - 文章管理
+  /api/follow:
+    post:
+      consumes:
+      - application/json
+      description: 关注或取消关注指定用户
+      parameters:
+      - description: 关注请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.FollowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 关注/取消关注用户
+      tags:
+      - 社交
+  /api/follow/followers:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前用户的粉丝列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 粉丝列表
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取粉丝列表
+      tags:
+      - 社交
+  /api/follow/following:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前用户的关注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 关注列表
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取关注列表
+      tags:
+      - 社交
+  /api/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定ID用户的公开信息
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户公开信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取用户资料
+      tags:
+      - 用户
+  /api/user/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户详细信息
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取当前用户信息
+      tags:
+      - 用户
   /auth/login:
     post:
       consumes:
@@ -517,32 +656,31 @@ paths:
     post:
       consumes:
       - application/json
-      description: 通过微信小程序登录接口，支持新用户注册和老用户登录
+      description: 微信用户登录/注册接口
       parameters:
-      - description: 微信登录参数
+      - description: 登录参数
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/controllers.WechatLoginRequest'
+          $ref: '#/definitions/controllers.WeChatLoginRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: 用户信息
+          description: 返回用户信息和token
           schema:
-            $ref: '#/definitions/models.User'
+            additionalProperties: true
+            type: object
         "400":
           description: 参数错误
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: 服务器内部错误
-          schema:
-            additionalProperties: true
-            type: object
-      summary: 微信小程序登录
+      summary: 微信登录
       tags:
       - 认证
+schemes:
+- http
+- https
 swagger: "2.0"

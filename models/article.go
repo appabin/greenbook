@@ -6,13 +6,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// 在文件顶部添加以下注释
+
 // Article 文章模型
 // @Description 文章信息
 type Article struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	// swagger:ignore
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"` // 使用 swagger:ignore 标记
 
 	Title    string `gorm:"size:255;not null;index" json:"title"` // 文章标题
 	Content  string `gorm:"type:text;not null" json:"content"`    // 文章内容

@@ -74,7 +74,7 @@ func FollowAction(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "关注成功"})
-	} else if req.Action == 0 {
+	} else if req.Action == 2 {
 		// 取消关注操作
 		result := global.Db.Where("follower_id = ? AND followed_id = ?", followerID, req.UserID).Delete(&models.UserFollow{})
 		if result.Error != nil {

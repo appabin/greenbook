@@ -9,7 +9,16 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -288,6 +297,198 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/follow": {
+            "post": {
+                "description": "关注或取消关注指定用户",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "社交"
+                ],
+                "summary": "关注/取消关注用户",
+                "parameters": [
+                    {
+                        "description": "关注请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.FollowRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/follow/followers": {
+            "get": {
+                "description": "获取当前用户的粉丝列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "社交"
+                ],
+                "summary": "获取粉丝列表",
+                "responses": {
+                    "200": {
+                        "description": "粉丝列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.User"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/follow/following": {
+            "get": {
+                "description": "获取当前用户的关注列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "社交"
+                ],
+                "summary": "获取关注列表",
+                "responses": {
+                    "200": {
+                        "description": "关注列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.User"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/info": {
+            "get": {
+                "description": "获取当前登录用户的详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "获取当前用户信息",
+                "responses": {
+                    "200": {
+                        "description": "用户详细信息",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/{id}": {
+            "get": {
+                "description": "获取指定ID用户的公开信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "获取用户资料",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "用户公开信息",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "用户不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "用户登录接口",
@@ -381,7 +582,7 @@ const docTemplate = `{
         },
         "/auth/wechat/login": {
             "post": {
-                "description": "通过微信小程序登录接口，支持新用户注册和老用户登录",
+                "description": "微信用户登录/注册接口",
                 "consumes": [
                     "application/json"
                 ],
@@ -391,34 +592,28 @@ const docTemplate = `{
                 "tags": [
                     "认证"
                 ],
-                "summary": "微信小程序登录",
+                "summary": "微信登录",
                 "parameters": [
                     {
-                        "description": "微信登录参数",
+                        "description": "登录参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controllers.WechatLoginRequest"
+                            "$ref": "#/definitions/controllers.WeChatLoginRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "用户信息",
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    },
-                    "400": {
-                        "description": "参数错误",
+                        "description": "返回用户信息和token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
-                    "500": {
-                        "description": "服务器内部错误",
+                    "400": {
+                        "description": "参数错误",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -472,6 +667,23 @@ const docTemplate = `{
                 }
             }
         },
+        "controllers.FollowRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "user_id"
+            ],
+            "properties": {
+                "action": {
+                    "description": "1: 关注, 0: 取消关注",
+                    "type": "integer"
+                },
+                "user_id": {
+                    "description": "要关注/取消关注的用户ID",
+                    "type": "integer"
+                }
+            }
+        },
         "controllers.LoginRequest": {
             "type": "object",
             "required": [
@@ -490,7 +702,10 @@ const docTemplate = `{
         "controllers.RegisterRequest": {
             "type": "object",
             "required": [
+                "email",
+                "nickname",
                 "password",
+                "phone",
                 "username"
             ],
             "properties": {
@@ -534,39 +749,32 @@ const docTemplate = `{
                 }
             }
         },
-        "controllers.WechatLoginRequest": {
+        "controllers.WeChatLoginRequest": {
             "type": "object",
             "required": [
                 "code"
             ],
             "properties": {
-                "avatarUrl": {
-                    "type": "string"
-                },
-                "city": {
-                    "type": "string"
-                },
                 "code": {
+                    "description": "微信登录code",
                     "type": "string"
                 },
-                "country": {
+                "encryptedData": {
+                    "description": "加密数据（首次登录需要）",
                     "type": "string"
                 },
-                "gender": {
-                    "type": "integer"
-                },
-                "language": {
+                "iv": {
+                    "description": "解密向量（首次登录需要）",
                     "type": "string"
                 },
-                "nickname": {
-                    "type": "string"
-                },
-                "province": {
+                "phone": {
+                    "description": "明文手机号（备用）",
                     "type": "string"
                 }
             }
         },
         "models.Article": {
+            "description": "文章信息",
             "type": "object",
             "properties": {
                 "author": {
@@ -630,6 +838,7 @@ const docTemplate = `{
             }
         },
         "models.Comment": {
+            "description": "评论信息",
             "type": "object",
             "properties": {
                 "article": {
@@ -691,6 +900,7 @@ const docTemplate = `{
             }
         },
         "models.Like": {
+            "description": "点赞信息",
             "type": "object",
             "properties": {
                 "article": {
@@ -726,6 +936,7 @@ const docTemplate = `{
             }
         },
         "models.Tag": {
+            "description": "标签信息",
             "type": "object",
             "properties": {
                 "articles": {
@@ -757,18 +968,7 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "city": {
-                    "type": "string"
-                },
-                "country": {
-                    "type": "string"
-                },
                 "created_at": {
-                    "description": "创建时间",
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "description": "删除时间",
                     "type": "string"
                 },
                 "email": {
@@ -785,15 +985,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "id": {
-                    "description": "用户ID",
                     "type": "integer"
-                },
-                "language": {
-                    "type": "string"
-                },
-                "last_login_at": {
-                    "description": "额外的时间字段",
-                    "type": "string"
                 },
                 "nickname": {
                     "type": "string"
@@ -811,9 +1003,6 @@ const docTemplate = `{
                 "posts_count": {
                     "type": "integer"
                 },
-                "province": {
-                    "type": "string"
-                },
                 "session_key": {
                     "type": "string"
                 },
@@ -821,7 +1010,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "description": "更新时间",
                     "type": "string"
                 },
                 "username": {
@@ -834,12 +1022,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
-	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Version:          "1.0",
+	Host:             "localhost:8080",
+	BasePath:         "/api",
+	Schemes:          []string{"http", "https"},
+	Title:            "Greenbook API",
+	Description:      "Greenbook社交博客平台API文档",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

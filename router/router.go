@@ -4,6 +4,10 @@ import (
 	"github.com/appabin/greenbook/controllers"
 	"github.com/appabin/greenbook/middlewares"
 	"github.com/gin-gonic/gin"
+
+	// 可选：如果需要在路由中直接配置swagger
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter() *gin.Engine {
@@ -16,6 +20,13 @@ func SetupRouter() *gin.Engine {
 		authGroup.POST("/register", controllers.Register)        // 网页注册
 		authGroup.POST("/wechat-login", controllers.WeChatLogin) // 微信登录（新增）
 	}
+
+	// apiPublic := r.Group("/api")
+	// userGroup := apiPublic.Group("/user")
+	// {
+	// 	userGroup.GET("/info", controllers.GetCurrentUserInfo)
+	// 	userGroup.GET("/:id", controllers.GetUserProfile) // 不需要登录也可以查看用户公开信息
+	// }
 
 	// // 公共API路由组（无需认证）
 	// apiPublic := r.Group("/api")
@@ -53,6 +64,13 @@ func SetupRouter() *gin.Engine {
 		// 	// apiProtected.DELETE("/follow/:id", controllers.UnfollowUser)
 		// 	// apiProtected.GET("/followings", controllers.GetFollowings)
 		// 	// apiProtected.GET("/followers", controllers.GetFollowers)
+
+		userGroup := apiProtected.Group("/user")
+		{
+			userGroup.GET("/info", controllers.GetCurrentUserInfo)
+			userGroup.GET("/:id", controllers.GetUserProfile) 
+		}
+
 		followGroup := apiProtected.Group("/follow")
 		{
 			followGroup.POST("", controllers.FollowAction)              // 关注/取消关注
@@ -60,5 +78,8 @@ func SetupRouter() *gin.Engine {
 			followGroup.GET("/followers", controllers.GetFollowersList) // 粉丝列表
 		}
 	}
+	// 如果想在这里添加swagger路由也可以
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	return r
 }
