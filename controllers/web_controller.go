@@ -33,16 +33,6 @@ type AuthResponse struct {
 }
 
 // Login 用户登录
-// @Summary 用户登录
-// @Description 用户登录接口
-// @Tags 认证
-// @Accept json
-// @Produce json
-// @Param data body LoginRequest true "登录参数"
-// @Success 200 {object} map[string]interface{} "返回用户信息和token"
-// @Failure 400 {object} map[string]interface{} "参数错误"
-// @Failure 401 {object} map[string]interface{} "认证失败"
-// @Router /auth/login [post]
 func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -92,15 +82,6 @@ func Login(c *gin.Context) {
 }
 
 // Register 用户注册
-// @Summary 用户注册
-// @Description 用户注册接口
-// @Tags 认证
-// @Accept json
-// @Produce json
-// @Param data body RegisterRequest true "注册参数"
-// @Success 200 {object} map[string]interface{} "返回用户信息和token"
-// @Failure 400 {object} map[string]interface{} "参数错误"
-// @Router /auth/register [post]
 func Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

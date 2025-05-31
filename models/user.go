@@ -9,13 +9,11 @@ import (
 // 在文件顶部添加以下注释
 
 // User 用户模型
-// @Description 用户信息
 type User struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	// swagger:ignore
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"` // 使用 swagger:ignore 标记
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Username string `gorm:"size:50;comment:用户名;default:'' " json:"username"`
 	Password string `gorm:"size:100;comment:密码;default:'' " json:"password"`

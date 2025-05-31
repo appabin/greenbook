@@ -35,16 +35,8 @@ type CreateCommentRequest struct {
 	ParentID *uint  `json:"parent_id" example:"1"`
 }
 
-// @Summary 创建文章
-// @Description 创建一篇新文章
-// @Tags 文章管理
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer 用户令牌"
-// @Param article body CreateArticleRequest true "文章信息"
-// @Success 200 {object} models.Article
-// @Router /api/articles [post]
-func (ac *ArticleController) Create(c *gin.Context) {
+// Create 创建文章
+func (ac *ArticleController) CreateArticle(c *gin.Context) {
 	var req CreateArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -77,14 +69,7 @@ func (ac *ArticleController) Create(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// @Summary 获取文章列表
-// @Description 获取文章列表，支持分页
-// @Tags 文章管理
-// @Produce json
-// @Param page query int false "页码" default(1)
-// @Param size query int false "每页数量" default(10)
-// @Success 200 {array} models.Article
-// @Router /api/articles [get]
+// List 获取文章列表
 func (ac *ArticleController) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
@@ -107,13 +92,7 @@ func (ac *ArticleController) List(c *gin.Context) {
 	})
 }
 
-// @Summary 获取文章详情
-// @Description 获取指定文章的详细信息
-// @Tags 文章管理
-// @Produce json
-// @Param id path int true "文章ID"
-// @Success 200 {object} models.Article
-// @Router /api/articles/{id} [get]
+// Get 获取文章详情
 func (ac *ArticleController) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -134,16 +113,7 @@ func (ac *ArticleController) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// @Summary 更新文章
-// @Description 更新指定文章的信息
-// @Tags 文章管理
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer 用户令牌"
-// @Param id path int true "文章ID"
-// @Param article body UpdateArticleRequest true "文章更新信息"
-// @Success 200 {object} models.Article
-// @Router /api/articles/{id} [put]
+// Update 更新文章
 func (ac *ArticleController) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -199,14 +169,7 @@ func (ac *ArticleController) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// @Summary 删除文章
-// @Description 删除指定的文章
-// @Tags 文章管理
-// @Produce json
-// @Param Authorization header string true "Bearer 用户令牌"
-// @Param id path int true "文章ID"
-// @Success 200 {object} map[string]interface{}
-// @Router /api/articles/{id} [delete]
+// Delete 删除文章
 func (ac *ArticleController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -234,14 +197,7 @@ func (ac *ArticleController) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "文章已删除"})
 }
 
-// @Summary 点赞文章
-// @Description 为指定文章点赞或取消点赞
-// @Tags 文章管理
-// @Produce json
-// @Param Authorization header string true "Bearer 用户令牌"
-// @Param id path int true "文章ID"
-// @Success 200 {object} map[string]interface{}
-// @Router /api/articles/{id}/like [post]
+// ToggleLike 点赞文章
 func (ac *ArticleController) ToggleLike(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -293,16 +249,7 @@ func (ac *ArticleController) ToggleLike(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "操作失败"})
 }
 
-// @Summary 评论文章
-// @Description 为指定文章添加评论
-// @Tags 文章管理
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer 用户令牌"
-// @Param id path int true "文章ID"
-// @Param comment body CreateCommentRequest true "评论信息"
-// @Success 200 {object} models.Comment
-// @Router /api/articles/{id}/comments [post]
+// CreateComment 评论文章
 func (ac *ArticleController) CreateComment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

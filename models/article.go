@@ -6,16 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// 在文件顶部添加以下注释
-
 // Article 文章模型
-// @Description 文章信息
 type Article struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	// swagger:ignore
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"` // 使用 swagger:ignore 标记
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Title    string `gorm:"size:255;not null;index" json:"title"` // 文章标题
 	Content  string `gorm:"type:text;not null" json:"content"`    // 文章内容
@@ -31,7 +27,6 @@ type Article struct {
 }
 
 // Tag 标签模型
-// @Description 标签信息
 type Tag struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -43,7 +38,6 @@ type Tag struct {
 }
 
 // Like 点赞模型
-// @Description 点赞信息
 type Like struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -56,7 +50,6 @@ type Like struct {
 }
 
 // Comment 评论模型
-// @Description 评论信息
 type Comment struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`

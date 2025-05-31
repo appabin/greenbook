@@ -16,16 +16,6 @@ type FollowRequest struct {
 }
 
 // FollowAction 关注/取消关注操作
-// @Summary 关注/取消关注用户
-// @Description 关注或取消关注指定用户
-// @Tags 社交
-// @Accept json
-// @Produce json
-// @Param data body FollowRequest true "关注请求参数"
-// @Success 200 {object} map[string]interface{} "操作成功"
-// @Failure 400 {object} map[string]interface{} "参数错误"
-// @Failure 401 {object} map[string]interface{} "未授权"
-// @Router /api/follow [post]
 func FollowAction(c *gin.Context) {
 	var req FollowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -92,14 +82,6 @@ func FollowAction(c *gin.Context) {
 }
 
 // GetFollowingList 获取关注列表
-// @Summary 获取关注列表
-// @Description 获取当前用户的关注列表
-// @Tags 社交
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.User "关注列表"
-// @Failure 401 {object} map[string]interface{} "未授权"
-// @Router /api/follow/following [get]
 func GetFollowingList(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
@@ -142,14 +124,6 @@ func GetFollowingList(c *gin.Context) {
 }
 
 // GetFollowersList 获取粉丝列表
-// @Summary 获取粉丝列表
-// @Description 获取当前用户的粉丝列表
-// @Tags 社交
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.User "粉丝列表"
-// @Failure 401 {object} map[string]interface{} "未授权"
-// @Router /api/follow/followers [get]
 func GetFollowersList(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")

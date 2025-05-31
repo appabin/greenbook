@@ -4,10 +4,6 @@ import (
 	"github.com/appabin/greenbook/controllers"
 	"github.com/appabin/greenbook/middlewares"
 	"github.com/gin-gonic/gin"
-
-	// 可选：如果需要在路由中直接配置swagger
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter() *gin.Engine {
@@ -21,54 +17,14 @@ func SetupRouter() *gin.Engine {
 		authGroup.POST("/wechat-login", controllers.WeChatLogin) // 微信登录（新增）
 	}
 
-	// apiPublic := r.Group("/api")
-	// userGroup := apiPublic.Group("/user")
-	// {
-	// 	userGroup.GET("/info", controllers.GetCurrentUserInfo)
-	// 	userGroup.GET("/:id", controllers.GetUserProfile) // 不需要登录也可以查看用户公开信息
-	// }
-
-	// // 公共API路由组（无需认证）
-	// apiPublic := r.Group("/api")
-	// {
-	// 	// 文章公开接口
-	// 	articlePublic := apiPublic.Group("/articles")
-	// 	{
-	// 		articlePublic.GET("", controllers.ArticleController.List)    // 文章列表
-	// 		articlePublic.GET("/:id", controllers.ArticleController.Get) // 文章详情
-	// 	}
-	// }
-
-	// // 受保护API路由组（需要JWT认证）
+	// 受保护API路由组（需要JWT认证）
 	apiProtected := r.Group("/api")
 	apiProtected.Use(middlewares.AuthMiddleWare()) // 统一应用认证中间件
 	{
-		// 	// 文章操作接口
-		// 	articleProtected := apiProtected.Group("/articles")
-		// 	{
-		// 		articleProtected.POST("", controllers.ArticleController.Create)              // 创建文章
-		// 		articleProtected.PUT("/:id", controllers.ArticleController.Update)           // 更新文章
-		// 		articleProtected.DELETE("/:id", controllers.ArticleController.Delete)        // 删除文章
-		// 		articleProtected.POST("/:id/like", controllers.ArticleController.ToggleLike) // 点赞操作
-
-		// 		// 评论相关子组
-		// 		commentsGroup := articleProtected.Group("/:id/comments")
-		// 		{
-		// 			commentsGroup.POST("", controllers.ArticleController.CreateComment)               // 发表评论
-		// 			commentsGroup.DELETE("/:comment_id", controllers.ArticleController.DeleteComment) // 删除评论
-		// 		}
-		// 	}
-
-		// 	// 用户社交功能（保持注释状态，待实现）
-		// 	// apiProtected.POST("/follow/:id", controllers.FollowUser)
-		// 	// apiProtected.DELETE("/follow/:id", controllers.UnfollowUser)
-		// 	// apiProtected.GET("/followings", controllers.GetFollowings)
-		// 	// apiProtected.GET("/followers", controllers.GetFollowers)
-
 		userGroup := apiProtected.Group("/user")
 		{
 			userGroup.GET("/info", controllers.GetCurrentUserInfo)
-			userGroup.GET("/:id", controllers.GetUserProfile) 
+			userGroup.GET("/:id", controllers.GetUserProfile)
 		}
 
 		followGroup := apiProtected.Group("/follow")
@@ -77,9 +33,15 @@ func SetupRouter() *gin.Engine {
 			followGroup.GET("/following", controllers.GetFollowingList) // 关注列表
 			followGroup.GET("/followers", controllers.GetFollowersList) // 粉丝列表
 		}
+
+		articleGroup := apiProtected.Group("/article")
+		{
+			articleGroup.POST("", controllers.CreateArticle)
+			articleGroup.GET("/:id", controllers.GetArticle)
+			articleGroup.GET("/list", controllers.GetArticleList)
+		}
+
 	}
-	// 如果想在这里添加swagger路由也可以
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return r
 }

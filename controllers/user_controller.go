@@ -11,14 +11,6 @@ import (
 )
 
 // GetCurrentUserInfo 获取当前登录用户的详细信息
-// @Summary 获取当前用户信息
-// @Description 获取当前登录用户的详细信息
-// @Tags 用户
-// @Accept json
-// @Produce json
-// @Success 200 {object} models.User "用户详细信息"
-// @Failure 401 {object} map[string]interface{} "未授权"
-// @Router /api/user/info [get]
 func GetCurrentUserInfo(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
@@ -72,17 +64,6 @@ func GetCurrentUserInfo(c *gin.Context) {
 	})
 }
 
-// GetUserProfile 获取指定用户的公开信息
-// @Summary 获取用户资料
-// @Description 获取指定ID用户的公开信息
-// @Tags 用户
-// @Accept json
-// @Produce json
-// @Param id path int true "用户ID"
-// @Success 200 {object} map[string]interface{} "用户公开信息"
-// @Failure 400 {object} map[string]interface{} "参数错误"
-// @Failure 404 {object} map[string]interface{} "用户不存在"
-// @Router /api/user/{id} [get]
 // GetUserProfile 获取指定用户的公开信息
 func GetUserProfile(c *gin.Context) {
 	// 获取路径参数中的用户ID

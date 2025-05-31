@@ -3,7 +3,6 @@ package models
 import "time"
 
 // UserFollow 用户关系模型（关注/粉丝）
-// @Description 关系信息
 type UserFollow struct {
 	FollowerID uint      `gorm:"primaryKey;index" json:"follower_id"` // 关注者ID
 	FollowedID uint      `gorm:"primaryKey;index" json:"followed_id"` // 被关注者ID

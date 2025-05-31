@@ -21,15 +21,6 @@ type WeChatLoginRequest struct {
 }
 
 // WeChatLogin 微信用户登录/注册
-// @Summary 微信登录
-// @Description 微信用户登录/注册接口
-// @Tags 认证
-// @Accept json
-// @Produce json
-// @Param data body WeChatLoginRequest true "登录参数"
-// @Success 200 {object} map[string]interface{} "返回用户信息和token"
-// @Failure 400 {object} map[string]interface{} "参数错误"
-// @Router /auth/wechat/login [post]
 func WeChatLogin(c *gin.Context) {
 	var req WeChatLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
