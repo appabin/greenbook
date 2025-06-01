@@ -12,7 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// 请求结构体定义（新增到文件顶部）
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
@@ -24,12 +23,6 @@ type RegisterRequest struct {
 	Nickname string `json:"nickname" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Phone    string `json:"phone" binding:"required"`
-}
-
-// 响应结构体定义（可选，或用gin.H）
-type AuthResponse struct {
-	Token string      `json:"token"`
-	User  interface{} `json:"user"`
 }
 
 // Login 用户登录
@@ -75,9 +68,9 @@ func Login(c *gin.Context) {
 		"createdAt": user.CreatedAt,
 	}
 
-	c.JSON(http.StatusOK, AuthResponse{
-		Token: token,
-		User:  userSafe,
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user":  userSafe,
 	})
 }
 
@@ -138,8 +131,8 @@ func Register(c *gin.Context) {
 		"createdAt": user.CreatedAt,
 	}
 
-	c.JSON(http.StatusOK, AuthResponse{
-		Token: token,
-		User:  userSafe,
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user":  userSafe,
 	})
 }

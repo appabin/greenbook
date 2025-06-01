@@ -31,10 +31,10 @@ func initDB() {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.UserFollow{},
-		// &models.Article{}, &models.Tag{}, &models.Like{}, &models.Comment{},
-		// &models.Comment{},
-		// &models.Tag{},
-		// &models.UserFollow{},
+		&models.Article{}, 
+		&models.Tag{}, 
+		&models.Like{},
+		&models.Comment{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

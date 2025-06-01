@@ -38,7 +38,7 @@ func WeChatLogin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "微信登录失败", "detail": err.Error()})
 		return
 	}
-	//可能有问题 
+	//可能有问题
 	// 查询已有用户
 	var user models.User
 	dbResult := global.Db.Where("open_id = ?", sessionRes.OpenID).First(&user)

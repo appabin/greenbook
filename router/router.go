@@ -37,8 +37,8 @@ func SetupRouter() *gin.Engine {
 		articleGroup := apiProtected.Group("/article")
 		{
 			articleGroup.POST("", controllers.CreateArticle)
+			articleGroup.GET("", controllers.GetArticleList)
 			articleGroup.GET("/:id", controllers.GetArticle)
-			articleGroup.GET("/list", controllers.GetArticleList)
 		}
 
 	}

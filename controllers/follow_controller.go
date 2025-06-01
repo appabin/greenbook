@@ -7,12 +7,12 @@ import (
 	"github.com/appabin/greenbook/global"
 	"github.com/appabin/greenbook/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // FollowRequest 关注请求结构
 type FollowRequest struct {
 	UserID uint `json:"user_id" binding:"required"` // 要关注/取消关注的用户ID
-	Action int  `json:"action" binding:"required"`  // 1: 关注, 0: 取消关注
 }
 
 // FollowAction 关注/取消关注操作
@@ -43,42 +43,50 @@ func FollowAction(c *gin.Context) {
 		return
 	}
 
-	// 根据action执行关注或取消关注
-	if req.Action == 1 {
-		// 关注操作
-		follow := models.UserFollow{
-			FollowerID: followerID.(uint),
-			FollowedID: req.UserID,
-		}
+	// 检查是否已关注或已取消关注
+	var follow models.UserFollow
 
-		// 检查是否已经关注
-		var existingFollow models.UserFollow
-		result := global.Db.Where("follower_id = ? AND followed_id = ?", followerID, req.UserID).First(&existingFollow)
-		if result.Error == nil {
-			c.JSON(http.StatusOK, gin.H{"message": "已经关注该用户"})
-			return
-		}
-
-		if err := global.Db.Create(&follow).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "关注失败"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "关注成功"})
-	} else if req.Action == 2 {
-		// 取消关注操作
-		result := global.Db.Where("follower_id = ? AND followed_id = ?", followerID, req.UserID).Delete(&models.UserFollow{})
-		if result.Error != nil {
+	if err := global.Db.Where("follower_id =? AND followed_id =?", followerID, req.UserID).First(&follow).Error; err == nil {
+		// 已关注，执行取消关注操作
+		if err := global.Db.Delete(&follow).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "取消关注失败"})
 			return
 		}
-		if result.RowsAffected == 0 {
-			c.JSON(http.StatusOK, gin.H{"message": "未关注该用户"})
+
+		// 更新关注者的关注数 -1
+		if err := global.Db.Model(&models.User{}).Where("id =?", followerID).UpdateColumn("following_count", gorm.Expr("following_count -?", 1)).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新关注数失败"})
+			return
+		}
+		// 更新被关注者的粉丝数 -1
+		if err := global.Db.Model(&models.User{}).Where("id =?", req.UserID).UpdateColumn("followers_count", gorm.Expr("followers_count -?", 1)).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新粉丝数失败"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "取消关注成功"})
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的操作类型"})
+		return
 	}
+
+	// 执行关注操作
+	follow = models.UserFollow{
+		FollowerID: uint(followerID.(uint)),
+		FollowedID: req.UserID,
+	}
+	if err := global.Db.Create(&follow).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "关注失败"})
+		return
+	}
+	// 更新关注者的关注数 +1
+	if err := global.Db.Model(&models.User{}).Where("id =?", followerID).UpdateColumn("following_count", gorm.Expr("following_count +?", 1)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新关注数失败"})
+		return
+	}
+	// 更新被关注者的粉丝数 +1
+	if err := global.Db.Model(&models.User{}).Where("id =?", req.UserID).UpdateColumn("followers_count", gorm.Expr("followers_count +?", 1)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新粉丝数失败"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "关注成功"})
 }
 
 // GetFollowingList 获取关注列表

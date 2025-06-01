@@ -20,6 +20,7 @@ type CreateArticleRequest struct {
 	Title   string   `json:"title" binding:"required" example:"文章标题"`
 	Content string   `json:"content" binding:"required" example:"文章内容"`
 	Tags    []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
+	Picture []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
 }
 
 // UpdateArticleRequest 更新文章请求
@@ -27,6 +28,7 @@ type UpdateArticleRequest struct {
 	Title   string   `json:"title" example:"更新后的标题"`
 	Content string   `json:"content" example:"更新后的内容"`
 	Tags    []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
+	Picture []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
 }
 
 // CreateCommentRequest 创建评论请求
@@ -35,8 +37,8 @@ type CreateCommentRequest struct {
 	ParentID *uint  `json:"parent_id" example:"1"`
 }
 
-// Create 创建文章
-func (ac *ArticleController) CreateArticle(c *gin.Context) {
+// CreateArticle 创建文章
+func CreateArticle(c *gin.Context) {
 	var req CreateArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -45,9 +47,11 @@ func (ac *ArticleController) CreateArticle(c *gin.Context) {
 
 	userID := c.GetUint("userID")
 	article := models.Article{
-		Title:    req.Title,
-		Content:  req.Content,
-		AuthorID: userID,
+		Title:        req.Title,
+		Content:      req.Content,
+		AuthorID:     userID,
+		LikeCount:    0,
+		CommentCount: 0,
 	}
 
 	// 处理标签
@@ -65,12 +69,27 @@ func (ac *ArticleController) CreateArticle(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建文章失败"})
 		return
 	}
+	// 更新用户的文章数量
+	global.Db.Model(&models.User{}).Where("id = ?", userID).UpdateColumn("posts_count", gorm.Expr("posts_count + ?", 1))
 
-	c.JSON(http.StatusOK, article)
+	// 返回文章信息，排除author字段
+	c.JSON(http.StatusOK, gin.H{
+		"id":            article.ID,
+		"created_at":    article.CreatedAt,
+		"updated_at":    article.UpdatedAt,
+		"title":         article.Title,
+		"content":       article.Content,
+		"author_id":     article.AuthorID,
+		"likes":         article.Likes,
+		"comments":      article.Comments,
+		"tags":          article.Tags,
+		"like_count":    article.LikeCount,
+		"comment_count": article.CommentCount,
+	})
 }
 
 // List 获取文章列表
-func (ac *ArticleController) List(c *gin.Context) {
+func GetArticleList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
 
@@ -93,7 +112,7 @@ func (ac *ArticleController) List(c *gin.Context) {
 }
 
 // Get 获取文章详情
-func (ac *ArticleController) Get(c *gin.Context) {
+func GetArticle(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
@@ -114,7 +133,7 @@ func (ac *ArticleController) Get(c *gin.Context) {
 }
 
 // Update 更新文章
-func (ac *ArticleController) Update(c *gin.Context) {
+func UpdateArticle(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
@@ -170,7 +189,7 @@ func (ac *ArticleController) Update(c *gin.Context) {
 }
 
 // Delete 删除文章
-func (ac *ArticleController) Delete(c *gin.Context) {
+func DeleteArticle(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
@@ -198,7 +217,7 @@ func (ac *ArticleController) Delete(c *gin.Context) {
 }
 
 // ToggleLike 点赞文章
-func (ac *ArticleController) ToggleLike(c *gin.Context) {
+func ToggleLike(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
@@ -250,7 +269,7 @@ func (ac *ArticleController) ToggleLike(c *gin.Context) {
 }
 
 // CreateComment 评论文章
-func (ac *ArticleController) CreateComment(c *gin.Context) {
+func CreateComment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
