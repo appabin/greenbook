@@ -31,14 +31,17 @@ func initDB() {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.UserFollow{},
-		&models.Article{}, 
-		&models.Tag{}, 
+		&models.Article{},
+		&models.Tag{},
 		&models.Like{},
 		&models.Comment{},
+		&models.Picture{},
+		&models.ArticlePicture{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	global.Db = db
+
 }

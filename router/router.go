@@ -41,7 +41,21 @@ func SetupRouter() *gin.Engine {
 			articleGroup.GET("/:id", controllers.GetArticle)
 		}
 
-	}
+		commentGroup := apiProtected.Group("/comment")
+		{
+			commentGroup.POST("", controllers.CreateComment)
+		}
 
+		likeGroup := apiProtected.Group("/like")
+		{
+			likeGroup.POST("/:article_id", controllers.ToggleLike) // 点赞/取消点赞
+		}
+
+		photoGroup := apiProtected.Group("/picture")
+		{
+			photoGroup.POST("/upload", controllers.UploadPicture)
+			photoGroup.POST("/upload/multipart", controllers.UploadPictureMultipart)
+		}
+	}
 	return r
 }

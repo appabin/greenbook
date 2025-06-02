@@ -17,18 +17,18 @@ type ArticleController struct{}
 
 // CreateArticleRequest 创建文章请求
 type CreateArticleRequest struct {
-	Title   string   `json:"title" binding:"required" example:"文章标题"`
-	Content string   `json:"content" binding:"required" example:"文章内容"`
-	Tags    []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
-	Picture []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
+	Title      string   `json:"title" binding:"required" example:"文章标题"`
+	Content    string   `json:"content" binding:"required" example:"文章内容"`
+	Tags       []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
+	PictureIDs []uint   `json:"picture_ids" example:"[1,2,3]"` // 图片ID数组
 }
 
 // UpdateArticleRequest 更新文章请求
 type UpdateArticleRequest struct {
-	Title   string   `json:"title" example:"更新后的标题"`
-	Content string   `json:"content" example:"更新后的内容"`
-	Tags    []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
-	Picture []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
+	Title    string   `json:"title" example:"更新后的标题"`
+	Content  string   `json:"content" example:"更新后的内容"`
+	Tags     []string `json:"tags" example:"[\"标签1\",\"标签2\"]"`
+	Pictures []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
 }
 
 // CreateCommentRequest 创建评论请求
@@ -69,10 +69,51 @@ func CreateArticle(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建文章失败"})
 		return
 	}
+
+	// 关联图片到文章
+	for i, pictureID := range req.PictureIDs {
+		// 验证图片是否属于当前用户
+		var picture models.Picture
+		if err := global.Db.Where("id = ? AND user_id = ?", pictureID, userID).First(&picture).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("图片ID %d 不存在或不属于当前用户", pictureID)})
+			return
+		}
+
+		// 创建文章图片关联记录
+		articlePicture := models.ArticlePicture{
+			ArticleID: article.ID,
+			PictureID: pictureID,
+			Order:     i, // 0为封面
+		}
+		if err := global.Db.Create(&articlePicture).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "关联图片失败"})
+			return
+		}
+
+		article.Pictures = append(article.Pictures, picture)
+	}
+
 	// 更新用户的文章数量
 	global.Db.Model(&models.User{}).Where("id = ?", userID).UpdateColumn("posts_count", gorm.Expr("posts_count + ?", 1))
 
-	// 返回文章信息，排除author字段
+	// 构建不包含用户信息的图片数组
+	var picturesResponse []gin.H
+	// 查询文章图片关联信息以获取顺序
+	var articlePictures []models.ArticlePicture
+
+	global.Db.Where("article_id = ?", article.ID).Order("`order`").Preload("Picture").Find(&articlePictures)
+
+	for _, ap := range articlePictures {
+		picturesResponse = append(picturesResponse, gin.H{
+			"id":         ap.Picture.ID,
+			"created_at": ap.Picture.CreatedAt,
+			"updated_at": ap.Picture.UpdatedAt,
+			"url":        ap.Picture.URL,
+			"order":      ap.Order,
+		})
+	}
+
+	// 返回文章信息
 	c.JSON(http.StatusOK, gin.H{
 		"id":            article.ID,
 		"created_at":    article.CreatedAt,
@@ -83,6 +124,7 @@ func CreateArticle(c *gin.Context) {
 		"likes":         article.Likes,
 		"comments":      article.Comments,
 		"tags":          article.Tags,
+		"pictures":      picturesResponse,
 		"like_count":    article.LikeCount,
 		"comment_count": article.CommentCount,
 	})

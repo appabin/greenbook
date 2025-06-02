@@ -18,9 +18,10 @@ type Article struct {
 	AuthorID uint   `gorm:"not null;index" json:"author_id"`      // 作者ID
 	Author   User   `gorm:"foreignKey:AuthorID" json:"author"`    // 作者信息
 
-	Likes    []Like    `json:"likes"`                              // 点赞列表
-	Comments []Comment `json:"comments"`                           // 评论列表
-	Tags     []Tag     `gorm:"many2many:article_tags" json:"tags"` // 文章标签
+	Likes    []Like    `json:"likes"`                                      // 点赞列表
+	Comments []Comment `json:"comments"`                                   // 评论列表
+	Tags     []Tag     `gorm:"many2many:article_tags" json:"tags"`         // 文章标签
+	Pictures []Picture `gorm:"many2many:article_pictures" json:"pictures"` // 文章图片
 
 	LikeCount    int `gorm:"default:0" json:"like_count"`    // 点赞数
 	CommentCount int `gorm:"default:0" json:"comment_count"` // 评论数
