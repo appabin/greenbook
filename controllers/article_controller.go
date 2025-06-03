@@ -31,12 +31,6 @@ type UpdateArticleRequest struct {
 	Pictures []string `json:"picture" example:"[\"图片1\",\"图片2\"]"`
 }
 
-// CreateCommentRequest 创建评论请求
-type CreateCommentRequest struct {
-	Content  string `json:"content" binding:"required" example:"评论内容"`
-	ParentID *uint  `json:"parent_id" example:"1"`
-}
-
 // CreateArticle 创建文章
 func CreateArticle(c *gin.Context) {
 	var req CreateArticleRequest
@@ -162,8 +156,12 @@ func GetArticle(c *gin.Context) {
 	}
 
 	var article models.Article
-	result := global.Db.Preload("Author").Preload("Tags").Preload("Comments", func(db *gorm.DB) *gorm.DB {
-		return db.Preload("User").Order("created_at DESC")
+	result := global.Db.Preload("Author", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, nickname, avatar")
+	}).Preload("Tags").Preload("Comments", func(db *gorm.DB) *gorm.DB {
+		return db.Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, nickname, avatar")
+		}).Order("created_at DESC")
 	}).First(&article, id)
 
 	if result.Error != nil {
@@ -171,7 +169,62 @@ func GetArticle(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, article)
+	// 获取文章图片
+	var pictures []models.Picture
+	global.Db.Joins("JOIN article_pictures ON pictures.id = article_pictures.picture_id").
+		Where("article_pictures.article_id = ?", id).
+		Order("article_pictures.`order`").
+		Find(&pictures)
+
+	// 构建返回数据
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":         article.ID,
+		"title":      article.Title,
+		"content":    article.Content,
+		"created_at": article.CreatedAt,
+		"author": gin.H{
+			"id":       article.Author.ID,
+			"nickname": article.Author.Nickname,
+			"avatar":   article.Author.Avatar,
+		},
+		"tags": func() []string {
+			var tagNames []string
+			for _, tag := range article.Tags {
+				tagNames = append(tagNames, tag.Name)
+			}
+			return tagNames
+		}(),
+		"comments": func() []gin.H {
+			var filteredComments []gin.H
+			for _, comment := range article.Comments {
+				filteredComments = append(filteredComments, gin.H{
+					"id":         comment.ID,
+					"content":    comment.Content,
+					"created_at": comment.CreatedAt,
+					"like_count": comment.LikeCount,
+					"user": gin.H{
+						"id":       comment.User.ID,
+						"nickname": comment.User.Nickname,
+						"avatar":   comment.User.Avatar,
+					},
+				})
+			}
+			return filteredComments
+		}(),
+		"pictures": func() []gin.H {
+			var filteredPictures []gin.H
+			for _, picture := range pictures {
+				filteredPictures = append(filteredPictures, gin.H{
+					"id":  picture.ID,
+					"url": picture.URL,
+				})
+			}
+			return filteredPictures
+		}(),
+		"like_count":    article.LikeCount,
+		"comment_count": article.CommentCount,
+	})
 }
 
 // Update 更新文章
@@ -256,89 +309,4 @@ func DeleteArticle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "文章已删除"})
-}
-
-// ToggleLike 点赞文章
-func ToggleLike(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
-		return
-	}
-
-	userID := c.GetUint("userID")
-	likeKey := fmt.Sprintf("article:like:%d:%d", id, userID)
-	countKey := fmt.Sprintf("article:like_count:%d", id)
-
-	// 使用Redis的SETNX命令尝试添加点赞
-	setResult := global.RedisDB.SetNX(likeKey, "1", 0).Val()
-	if setResult {
-		// 点赞成功，增加计数
-		global.RedisDB.Incr(countKey)
-
-		// 异步保存到数据库
-		go func() {
-			like := models.Like{
-				UserID:    userID,
-				ArticleID: uint(id),
-			}
-			global.Db.Create(&like)
-			global.Db.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count + ?", 1))
-		}()
-
-		c.JSON(http.StatusOK, gin.H{"message": "点赞成功"})
-		return
-	}
-
-	// 如果SETNX失败，说明已经点赞，尝试取消点赞
-	delResult := global.RedisDB.Del(likeKey).Val()
-	if delResult > 0 {
-		// 取消点赞成功，减少计数
-		global.RedisDB.Decr(countKey)
-
-		// 异步从数据库中删除
-		go func() {
-			var like models.Like
-			global.Db.Where("user_id = ? AND article_id = ?", userID, id).Delete(&like)
-			global.Db.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count - ?", 1))
-		}()
-
-		c.JSON(http.StatusOK, gin.H{"message": "已取消点赞"})
-		return
-	}
-
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "操作失败"})
-}
-
-// CreateComment 评论文章
-func CreateComment(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
-		return
-	}
-
-	var req CreateCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	userID := c.GetUint("userID")
-	comment := models.Comment{
-		Content:   req.Content,
-		UserID:    userID,
-		ArticleID: uint(id),
-		ParentID:  req.ParentID,
-	}
-
-	if err := global.Db.Create(&comment).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建评论失败"})
-		return
-	}
-
-	// 更新文章评论数
-	global.Db.Model(&models.Article{}).Where("id = ?", id).Update("comment_count", gorm.Expr("comment_count + ?", 1))
-
-	c.JSON(http.StatusOK, comment)
 }

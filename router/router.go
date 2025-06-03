@@ -9,6 +9,9 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// 静态文件服务
+	r.Static("/static", "./static")
+
 	// 认证相关路由组
 	authGroup := r.Group("/api/auth")
 	{
@@ -25,6 +28,7 @@ func SetupRouter() *gin.Engine {
 		{
 			userGroup.GET("/info", controllers.GetCurrentUserInfo)
 			userGroup.GET("/:id", controllers.GetUserProfile)
+			userGroup.POST("/avatar", controllers.UpdateUserAvatar) // 更新用户头像
 		}
 
 		followGroup := apiProtected.Group("/follow")
@@ -43,12 +47,13 @@ func SetupRouter() *gin.Engine {
 
 		commentGroup := apiProtected.Group("/comment")
 		{
-			commentGroup.POST("", controllers.CreateComment)
+			commentGroup.POST("/:article_id", controllers.CreateComment)
 		}
 
 		likeGroup := apiProtected.Group("/like")
 		{
-			likeGroup.POST("/:article_id", controllers.ToggleLike) // 点赞/取消点赞
+			likeGroup.POST("/:article_id", controllers.ArticleToggleLike) // 点赞/取消点赞
+			likeGroup.POST("/comment/:comment_id", controllers.CommentToggleLike)
 		}
 
 		photoGroup := apiProtected.Group("/picture")
