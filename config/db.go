@@ -37,6 +37,7 @@ func initDB() {
 		&models.Comment{},
 		&models.Picture{},
 		&models.ArticlePicture{},
+		&models.Favorite{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

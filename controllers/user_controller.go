@@ -65,6 +65,18 @@ func GetCurrentUserInfo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户文章失败"})
 		return
 	}
+	var favoriteArticles []models.Article
+	if err := global.Db.Select("articles.id, articles.title, articles.author_id, articles.like_count, articles.created_at").
+		Preload("Author", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, nickname")
+		}).
+		Joins("JOIN favorites ON favorites.article_id = articles.id").
+		Where("favorites.user_id =?", userID).
+		Order("favorites.created_at DESC").
+		Find(&favoriteArticles).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取收藏文章失败"})
+		return
+	}
 
 	// 查询当前用户点赞过的文章列表
 	var likedArticles []models.Article
@@ -108,6 +120,32 @@ func GetCurrentUserInfo(c *gin.Context) {
 			"is_liked":    isLiked,
 		})
 	}
+	// 构建收藏文章响应数据
+	favoriteArticleList := make([]gin.H, 0)
+	for _, article := range favoriteArticles {
+		// 获取封面图URL（order=0的图片）
+		var coverImageURL string
+		var picture models.Picture
+		if err := global.Db.Select("pictures.url").
+			Joins("JOIN article_pictures ON article_pictures.picture_id = pictures.id").
+			Where("article_pictures.article_id =? AND article_pictures.`order` = 0", article.ID).
+			First(&picture).Error; err == nil {
+			coverImageURL = picture.URL
+		}
+		// 检查当前用户是否点赞了这篇文章
+		var isLiked bool
+		var likeCount int64
+		global.Db.Model(&models.Like{}).Where("user_id = ? AND article_id = ?", userID, article.ID).Count(&likeCount)
+		isLiked = likeCount > 0
+		favoriteArticleList = append(favoriteArticleList, gin.H{
+			"id":          article.ID,
+			"title":       article.Title,
+			"author_name": article.Author.Nickname,
+			"cover_url":   coverImageURL,
+			"like_count":  article.LikeCount,
+			"is_liked":    isLiked,
+		})
+	}
 
 	// 构建点赞文章响应数据
 	likedArticleList := make([]gin.H, 0)
@@ -134,9 +172,10 @@ func GetCurrentUserInfo(c *gin.Context) {
 
 	// 返回用户信息和统计数据
 	c.JSON(http.StatusOK, gin.H{
-		"user":           user,
-		"user_articles":  userArticleList,
-		"liked_articles": likedArticleList,
+		"user":              user,
+		"user_articles":     userArticleList,
+		"favorite_articles": favoriteArticleList,
+		"liked_articles":    likedArticleList,
 	})
 }
 

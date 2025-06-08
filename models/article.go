@@ -18,13 +18,15 @@ type Article struct {
 	AuthorID uint   `gorm:"not null;index" json:"author_id"`      // 作者ID
 	Author   User   `gorm:"foreignKey:AuthorID" json:"author"`    // 作者信息
 
-	Likes    []Like    `json:"likes"`                                      // 点赞列表
-	Comments []Comment `json:"comments"`                                   // 评论列表
-	Tags     []Tag     `gorm:"many2many:article_tags" json:"tags"`         // 文章标签
-	Pictures []Picture `gorm:"many2many:article_pictures" json:"pictures"` // 文章图片
+	Likes     []Like     `json:"likes"`                                      // 点赞列表
+	Favorites []Favorite `json:"favorites"`                                  // 收藏列表
+	Comments  []Comment  `json:"comments"`                                   // 评论列表
+	Tags      []Tag      `gorm:"many2many:article_tags" json:"tags"`         // 文章标签
+	Pictures  []Picture  `gorm:"many2many:article_pictures" json:"pictures"` // 文章图片
 
-	LikeCount    int `gorm:"default:0" json:"like_count"`    // 点赞数
-	CommentCount int `gorm:"default:0" json:"comment_count"` // 评论数
+	LikeCount     int `gorm:"default:0" json:"like_count"`     // 点赞数
+	FavoriteCount int `gorm:"default:0" json:"favorite_count"` // 收藏数
+	CommentCount  int `gorm:"default:0" json:"comment_count"`  // 评论数
 }
 
 // Tag 标签模型
@@ -65,6 +67,18 @@ type Comment struct {
 	LikeCount int `gorm:"default:0" json:"like_count"` // 点赞数
 }
 
+// Favorite 收藏模型
+type Favorite struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+
+	UserID    uint    `gorm:"not null;index" json:"user_id"`       // 收藏用户ID
+	User      User    `gorm:"foreignKey:UserID" json:"user"`       // 收藏用户
+	ArticleID uint    `gorm:"not null;index" json:"article_id"`    // 被收藏文章ID
+	Article   Article `gorm:"foreignKey:ArticleID" json:"article"` // 被收藏文章
+}
+
 // CommentLike 评论点赞模型
 type CommentLike struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
@@ -87,6 +101,10 @@ func (Tag) TableName() string {
 
 func (Like) TableName() string {
 	return "likes"
+}
+
+func (Favorite) TableName() string {
+	return "favorites"
 }
 
 func (Comment) TableName() string {

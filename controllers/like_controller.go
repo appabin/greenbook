@@ -63,6 +63,58 @@ func ArticleToggleLike(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "操作失败"})
 }
 
+// ArticleToggleFavorite 收藏文章
+func ArticleToggleFavorite(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("article_id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的文章ID"})
+		return
+	}
+
+	userID := c.GetUint("userID")
+	favoriteKey := fmt.Sprintf("article:favorite:%d:%d", id, userID)
+	countKey := fmt.Sprintf("article:favorite_count:%d", id)
+
+	// 使用Redis的SETNX命令尝试添加收藏
+	setResult := global.RedisDB.SetNX(favoriteKey, "1", 0).Val()
+	if setResult {
+		// 收藏成功，增加计数
+		global.RedisDB.Incr(countKey)
+
+		// 异步保存到数据库
+		go func() {
+			favorite := models.Favorite{
+				UserID:    userID,
+				ArticleID: uint(id),
+			}
+			global.Db.Create(&favorite)
+			global.Db.Model(&models.Article{}).Where("id = ?", id).Update("favorite_count", gorm.Expr("favorite_count + ?", 1))
+		}()
+
+		c.JSON(http.StatusOK, gin.H{"message": "收藏成功"})
+		return
+	}
+
+	// 如果SETNX失败，说明已经收藏，尝试取消收藏
+	delResult := global.RedisDB.Del(favoriteKey).Val()
+	if delResult > 0 {
+		// 取消收藏成功，减少计数
+		global.RedisDB.Decr(countKey)
+
+		// 异步从数据库中删除
+		go func() {
+			var favorite models.Favorite
+			global.Db.Where("user_id = ? AND article_id = ?", userID, id).Delete(&favorite)
+			global.Db.Model(&models.Article{}).Where("id = ?", id).Update("favorite_count", gorm.Expr("favorite_count - ?", 1))
+		}()
+
+		c.JSON(http.StatusOK, gin.H{"message": "已取消收藏"})
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "操作失败"})
+}
+
 func CommentToggleLike(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("comment_id"), 10, 32)
 	if err != nil {

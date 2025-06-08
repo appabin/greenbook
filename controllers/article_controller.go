@@ -109,18 +109,19 @@ func CreateArticle(c *gin.Context) {
 
 	// 返回文章信息
 	c.JSON(http.StatusOK, gin.H{
-		"id":            article.ID,
-		"created_at":    article.CreatedAt,
-		"updated_at":    article.UpdatedAt,
-		"title":         article.Title,
-		"content":       article.Content,
-		"author_id":     article.AuthorID,
-		"likes":         article.Likes,
-		"comments":      article.Comments,
-		"tags":          article.Tags,
-		"pictures":      picturesResponse,
-		"like_count":    article.LikeCount,
-		"comment_count": article.CommentCount,
+		"id":             article.ID,
+		"created_at":     article.CreatedAt,
+		"updated_at":     article.UpdatedAt,
+		"title":          article.Title,
+		"content":        article.Content,
+		"author_id":      article.AuthorID,
+		"likes":          article.Likes,
+		"comments":       article.Comments,
+		"tags":           article.Tags,
+		"pictures":       picturesResponse,
+		"like_count":     article.LikeCount,
+		"favorite_count": article.FavoriteCount,
+		"comment_count":  article.CommentCount,
 	})
 }
 
@@ -222,8 +223,9 @@ func GetArticle(c *gin.Context) {
 			}
 			return filteredPictures
 		}(),
-		"like_count":    article.LikeCount,
-		"comment_count": article.CommentCount,
+		"like_count":     article.LikeCount,
+		"favorite_count": article.FavoriteCount,
+		"comment_count":  article.CommentCount,
 	})
 }
 

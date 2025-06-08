@@ -56,6 +56,11 @@ func SetupRouter() *gin.Engine {
 			likeGroup.POST("/comment/:comment_id", controllers.CommentToggleLike)
 		}
 
+		favoriteGroup := apiProtected.Group("/favorite")
+		{
+			favoriteGroup.POST("/:article_id", controllers.ArticleToggleFavorite) // 收藏/取消收藏
+		}
+
 		photoGroup := apiProtected.Group("/picture")
 		{
 			photoGroup.POST("/upload", controllers.UploadPicture)
