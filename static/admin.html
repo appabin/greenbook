@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 100px auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .nav {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .pagination button {
+            margin: 0 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .chart-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .logout {
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="loginPage">
+        <div class="login-form">
+            <h2 style="text-align: center; margin-bottom: 30px;">管理员登录</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">用户名:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">登录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 管理页面 -->
+    <div id="adminPage" class="hidden">
+        <div class="container">
+            <div class="header">
+                <h1>后台管理系统</h1>
+                <button class="btn logout" onclick="logout()">退出登录</button>
+            </div>
+
+            <div class="nav">
+                <button class="btn" onclick="showStatistics()">数据统计</button>
+                <button class="btn" onclick="showUsers()">用户管理</button>
+                <button class="btn" onclick="showArticles()">文章管理</button>
+            </div>
+
+            <div class="content">
+                <!-- 数据统计页面 -->
+                <div id="statisticsContent">
+                    <h2>数据统计</h2>
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- 统计卡片将通过JavaScript动态生成 -->
+                    </div>
+                    <div class="chart-container">
+                        <h3>用户注册趋势（最近7天）</h3>
+                        <div id="userChart" style="height: 200px; background: white; border-radius: 5px; padding: 20px; margin-bottom: 20px;">
+                            <!-- 简单的文字图表 -->
+                        </div>
+                        <h3>文章发布趋势（最近7天）</h3>
+                        <div id="articleChart" style="height: 200px; background: white; border-radius: 5px; padding: 20px;">
+                            <!-- 简单的文字图表 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 用户管理页面 -->
+                <div id="usersContent" class="hidden">
+                    <h2>用户管理</h2>
+                    <table class="table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>昵称</th>
+                                <th>性别</th>
+                                <th>手机</th>
+                                <th>邮箱</th>
+                                <th>注册时间</th>
+                                <th>关注数</th>
+                                <th>粉丝数</th>
+                                <th>文章数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- 用户数据将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="usersPagination">
+                        <!-- 分页按钮将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 文章管理页面 -->
+                <div id="articlesContent" class="hidden">
+                    <h2>文章管理</h2>
+                    <table class="table" id="articlesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>标题</th>
+                                <th>作者</th>
+                                <th>点赞数</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="articlesTableBody">
+                            <!-- 文章数据将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="articlesPagination">
+                        <!-- 分页按钮将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = {
+            users: 1,
+            articles: 1
+        };
+        let adminToken = '';
+
+        // 登录功能
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    adminToken = data.token;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('adminPage').classList.remove('hidden');
+                    showStatistics();
+                } else {
+                    alert(data.error || '登录失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        });
+
+        // 退出登录
+        function logout() {
+            adminToken = '';
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // 显示统计页面
+        async function showStatistics() {
+            hideAllContent();
+            document.getElementById('statisticsContent').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/admin/statistics');
+                const data = await response.json();
+
+                // 显示统计卡片
+                const statsGrid = document.getElementById('statsGrid');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.user_count}</div>
+                        <div>总用户数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.article_count}</div>
+                        <div>总文章数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.like_count}</div>
+                        <div>总点赞数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.favorite_count}</div>
+                        <div>总收藏数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.follow_count}</div>
+                        <div>总关注数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.today_user_count}</div>
+                        <div>今日新增用户</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.overview.today_article_count}</div>
+                        <div>今日新增文章</div>
+                    </div>
+                `;
+
+                // 显示用户趋势
+                const userChart = document.getElementById('userChart');
+                let userTrendHtml = '<div style="display: flex; justify-content: space-between; align-items: end; height: 150px;">';
+                data.trends.user_trend.forEach(item => {
+                    const height = Math.max(item.count * 10, 5);
+                    userTrendHtml += `
+                        <div style="text-align: center;">
+                            <div style="background: #667eea; width: 30px; height: ${height}px; margin-bottom: 5px;"></div>
+                            <div style="font-size: 12px;">${item.date.split('-')[2]}</div>
+                            <div style="font-size: 10px;">${item.count}</div>
+                        </div>
+                    `;
+                });
+                userTrendHtml += '</div>';
+                userChart.innerHTML = userTrendHtml;
+
+                // 显示文章趋势
+                const articleChart = document.getElementById('articleChart');
+                let articleTrendHtml = '<div style="display: flex; justify-content: space-between; align-items: end; height: 150px;">';
+                data.trends.article_trend.forEach(item => {
+                    const height = Math.max(item.count * 10, 5);
+                    articleTrendHtml += `
+                        <div style="text-align: center;">
+                            <div style="background: #764ba2; width: 30px; height: ${height}px; margin-bottom: 5px;"></div>
+                            <div style="font-size: 12px;">${item.date.split('-')[2]}</div>
+                            <div style="font-size: 10px;">${item.count}</div>
+                        </div>
+                    `;
+                });
+                articleTrendHtml += '</div>';
+                articleChart.innerHTML = articleTrendHtml;
+
+            } catch (error) {
+                alert('获取统计数据失败');
+            }
+        }
+
+        // 显示用户管理页面
+        async function showUsers(page = 1) {
+            hideAllContent();
+            document.getElementById('usersContent').classList.remove('hidden');
+            currentPage.users = page;
+
+            try {
+                const response = await fetch(`/admin/users?page=${page}&limit=10`);
+                const data = await response.json();
+
+                // 显示用户列表
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+                data.users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.nickname || '-'}</td>
+                        <td>${user.gender === 1 ? '男' : user.gender === 2 ? '女' : '未知'}</td>
+                        <td>${user.phone || '-'}</td>
+                        <td>${user.email || '-'}</td>
+                        <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td>${user.following_count}</td>
+                        <td>${user.followers_count}</td>
+                        <td>${user.posts_count}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id})">删除</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 显示分页
+                showPagination('usersPagination', data.total, page, 10, showUsers);
+
+            } catch (error) {
+                alert('获取用户列表失败');
+            }
+        }
+
+        // 显示文章管理页面
+        async function showArticles(page = 1) {
+            hideAllContent();
+            document.getElementById('articlesContent').classList.remove('hidden');
+            currentPage.articles = page;
+
+            try {
+                const response = await fetch(`/admin/articles?page=${page}&limit=10`);
+                const data = await response.json();
+
+                // 显示文章列表
+                const tbody = document.getElementById('articlesTableBody');
+                tbody.innerHTML = '';
+                data.articles.forEach(article => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${article.id}</td>
+                        <td>${article.title}</td>
+                        <td>${article.Author ? article.Author.nickname : '-'}</td>
+                        <td>${article.like_count}</td>
+                        <td>${new Date(article.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="deleteArticle(${article.id})">删除</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 显示分页
+                showPagination('articlesPagination', data.total, page, 10, showArticles);
+
+            } catch (error) {
+                alert('获取文章列表失败');
+            }
+        }
+
+        // 删除用户
+        async function deleteUser(userId) {
+            if (!confirm('确定要删除这个用户吗？')) return;
+
+            try {
+                const response = await fetch(`/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('用户删除成功');
+                    showUsers(currentPage.users);
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '删除失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        // 删除文章
+        async function deleteArticle(articleId) {
+            if (!confirm('确定要删除这篇文章吗？')) return;
+
+            try {
+                const response = await fetch(`/admin/articles/${articleId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('文章删除成功');
+                    showArticles(currentPage.articles);
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '删除失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        // 显示分页
+        function showPagination(containerId, total, currentPage, limit, callback) {
+            const container = document.getElementById(containerId);
+            const totalPages = Math.ceil(total / limit);
+            
+            let html = '';
+            
+            // 上一页
+            if (currentPage > 1) {
+                html += `<button class="btn" onclick="${callback.name}(${currentPage - 1})">上一页</button>`;
+            }
+            
+            // 页码
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                if (i === currentPage) {
+                    html += `<button class="btn" style="background: #333;">${i}</button>`;
+                } else {
+                    html += `<button class="btn" onclick="${callback.name}(${i})">${i}</button>`;
+                }
+            }
+            
+            // 下一页
+            if (currentPage < totalPages) {
+                html += `<button class="btn" onclick="${callback.name}(${currentPage + 1})">下一页</button>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // 隐藏所有内容
+        function hideAllContent() {
+            document.getElementById('statisticsContent').classList.add('hidden');
+            document.getElementById('usersContent').classList.add('hidden');
+            document.getElementById('articlesContent').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

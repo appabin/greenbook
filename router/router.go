@@ -9,8 +9,11 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// 静态文件服务
-	r.Static("/static", "./static")
+	// 图片代理服务（从 MinIO 获取图片）
+	r.GET("/static/images/:filename", controllers.ServeImageFromMinIO)
+	// 其他静态文件服务（如果需要）
+	r.Static("/static/css", "./static/css")
+	r.Static("/static/js", "./static/js")
 
 	// 认证相关路由组
 	authGroup := r.Group("/api/auth")
@@ -42,6 +45,7 @@ func SetupRouter() *gin.Engine {
 		{
 			articleGroup.POST("", controllers.CreateArticle)
 			articleGroup.GET("", controllers.GetArticleList)
+			articleGroup.GET("/follow", controllers.GetFollowArticleList)
 			articleGroup.GET("/:id", controllers.GetArticle)
 		}
 
@@ -66,6 +70,30 @@ func SetupRouter() *gin.Engine {
 			photoGroup.POST("/upload", controllers.UploadPicture)
 			photoGroup.POST("/upload/multipart", controllers.UploadPictureMultipart)
 		}
+
+		searchGroup := apiProtected.Group("/search")
+		{
+			searchGroup.GET("/articles", controllers.SearchArticles) // 搜索文章
+			searchGroup.GET("/users", controllers.SearchUsers)       // 搜索用户
+			searchGroup.GET("/tags", controllers.SearchTags)         // 搜索标签
+		}
 	}
+
+	// 管理员路由
+	admin := r.Group("/admin")
+	{
+		admin.POST("/login", controllers.AdminLogin)
+		
+		// 管理员保护路由（简化版，实际应该有JWT验证）
+		adminProtected := admin.Group("/")
+		{
+			adminProtected.GET("/users", controllers.AdminGetUserList)
+			adminProtected.DELETE("/users/:id", controllers.AdminDeleteUser)
+			adminProtected.GET("/articles", controllers.AdminGetArticleList)
+			adminProtected.DELETE("/articles/:id", controllers.AdminDeleteArticle)
+			adminProtected.GET("/statistics", controllers.GetStatistics)
+		}
+	}
+
 	return r
 }

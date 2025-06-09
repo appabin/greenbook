@@ -11,3 +11,10 @@ redis:
   addr: localhost:6379
   DB: 0
   Password: ""
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket_name: "greenbook"
+  use_ssl: false

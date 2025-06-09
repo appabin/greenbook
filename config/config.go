@@ -27,7 +27,14 @@ type Config struct {
 		Addr     string
 		DB       int
 		Password string
-	}
+	} `mapstructure:"redis"`
+	MinIO struct {
+		Endpoint   string `mapstructure:"endpoint"`
+		AccessKey  string `mapstructure:"access_key"`
+		SecretKey  string `mapstructure:"secret_key"`
+		BucketName string `mapstructure:"bucket_name"`
+		UseSSL     bool   `mapstructure:"use_ssl"`
+	} `mapstructure:"minio"`
 }
 
 var AppConfig *Config

@@ -57,7 +57,7 @@ func GetCurrentUserInfo(c *gin.Context) {
 	var userArticles []models.Article
 	if err := global.Db.Select("id, title, author_id, like_count, created_at").
 		Preload("Author", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id, nickname")
+			return db.Select("id, nickname, avatar")
 		}).
 		Where("author_id = ?", userID).
 		Order("created_at DESC").
@@ -68,7 +68,7 @@ func GetCurrentUserInfo(c *gin.Context) {
 	var favoriteArticles []models.Article
 	if err := global.Db.Select("articles.id, articles.title, articles.author_id, articles.like_count, articles.created_at").
 		Preload("Author", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id, nickname")
+			return db.Select("id, nickname, avatar")
 		}).
 		Joins("JOIN favorites ON favorites.article_id = articles.id").
 		Where("favorites.user_id =?", userID).
@@ -82,10 +82,10 @@ func GetCurrentUserInfo(c *gin.Context) {
 	var likedArticles []models.Article
 	if err := global.Db.Select("articles.id, articles.title, articles.author_id, articles.like_count, articles.created_at").
 		Preload("Author", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id, nickname")
+			return db.Select("id, nickname, avatar")
 		}).
 		Joins("JOIN likes ON likes.article_id = articles.id").
-		Where("likes.user_id = ?", userID).
+		Where("likes.user_id = ? AND likes.deleted_at IS NULL", userID).
 		Order("likes.created_at DESC").
 		Find(&likedArticles).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取点赞文章失败"})
@@ -112,12 +112,13 @@ func GetCurrentUserInfo(c *gin.Context) {
 		isLiked = likeCount > 0
 
 		userArticleList = append(userArticleList, gin.H{
-			"id":          article.ID,
-			"title":       article.Title,
-			"author_name": article.Author.Nickname,
-			"cover_url":   coverImageURL,
-			"like_count":  article.LikeCount,
-			"is_liked":    isLiked,
+			"id":            article.ID,
+			"title":         article.Title,
+			"author_name":   article.Author.Nickname,
+			"author_avatar": article.Author.Avatar,
+			"cover_url":     coverImageURL,
+			"like_count":    article.LikeCount,
+			"is_liked":      isLiked,
 		})
 	}
 	// 构建收藏文章响应数据
@@ -138,12 +139,13 @@ func GetCurrentUserInfo(c *gin.Context) {
 		global.Db.Model(&models.Like{}).Where("user_id = ? AND article_id = ?", userID, article.ID).Count(&likeCount)
 		isLiked = likeCount > 0
 		favoriteArticleList = append(favoriteArticleList, gin.H{
-			"id":          article.ID,
-			"title":       article.Title,
-			"author_name": article.Author.Nickname,
-			"cover_url":   coverImageURL,
-			"like_count":  article.LikeCount,
-			"is_liked":    isLiked,
+			"id":            article.ID,
+			"title":         article.Title,
+			"author_name":   article.Author.Nickname,
+			"author_avatar": article.Author.Avatar,
+			"cover_url":     coverImageURL,
+			"like_count":    article.LikeCount,
+			"is_liked":      isLiked,
 		})
 	}
 
@@ -161,12 +163,13 @@ func GetCurrentUserInfo(c *gin.Context) {
 		}
 
 		likedArticleList = append(likedArticleList, gin.H{
-			"id":          article.ID,
-			"title":       article.Title,
-			"author_name": article.Author.Nickname,
-			"cover_url":   coverImageURL,
-			"like_count":  article.LikeCount,
-			"is_liked":    true, // 这些都是用户点赞过的文章
+			"id":            article.ID,
+			"title":         article.Title,
+			"author_name":   article.Author.Nickname,
+			"author_avatar": article.Author.Avatar,
+			"cover_url":     coverImageURL,
+			"like_count":    article.LikeCount,
+			"is_liked":      true, // 这些都是用户点赞过的文章
 		})
 	}
 
@@ -204,6 +207,13 @@ func GetUserProfile(c *gin.Context) {
 	var articleCount int64
 	global.Db.Model(&models.Article{}).Where("author_id = ?", id).Count(&articleCount)
 
+	// 更新用户统计数据到数据库
+	global.Db.Model(&user).Updates(map[string]interface{}{
+		"following_count": followingCount,
+		"followers_count": followerCount,
+		"posts_count":     articleCount,
+	})
+
 	// 检查当前用户是否关注了该用户
 	var isFollowing bool
 	currentUserID, exists := c.Get("userID")
@@ -217,7 +227,7 @@ func GetUserProfile(c *gin.Context) {
 	var userArticles []models.Article
 	if err := global.Db.Select("id, title, author_id, like_count, created_at").
 		Preload("Author", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id, nickname")
+			return db.Select("id, nickname, avatar")
 		}).
 		Where("author_id = ?", id).
 		Order("created_at DESC").
@@ -243,7 +253,7 @@ func GetUserProfile(c *gin.Context) {
 		var isLiked bool
 		if currentUserID != nil {
 			var likeCount int64
-			global.Db.Model(&models.Like{}).Where("user_id = ? AND article_id = ?", currentUserID, article.ID).Count(&likeCount)
+			global.Db.Model(&models.Like{}).Where("user_id = ? AND article_id = ? AND deleted_at IS NULL", currentUserID, article.ID).Count(&likeCount)
 			isLiked = likeCount > 0
 		}
 
@@ -256,6 +266,48 @@ func GetUserProfile(c *gin.Context) {
 		})
 	}
 
+	// 查询被查看用户的收藏文章列表
+	var userFavoriteArticles []models.Article
+	userFavoriteList := make([]gin.H, 0)
+	if err := global.Db.Select("articles.id, articles.title, articles.author_id, articles.like_count, articles.created_at").
+		Preload("Author", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, nickname, avatar")
+		}).
+		Joins("JOIN favorites ON favorites.article_id = articles.id AND favorites.deleted_at IS NULL").
+		Where("favorites.user_id = ?", id).
+		Order("favorites.created_at DESC").
+		Find(&userFavoriteArticles).Error; err == nil {
+
+		// 构建收藏文章响应数据
+		for _, article := range userFavoriteArticles {
+			// 获取封面图URL（order=0的图片）
+			var coverImageURL string
+			var picture models.Picture
+			if err := global.Db.Select("pictures.url").
+				Joins("JOIN article_pictures ON article_pictures.picture_id = pictures.id").
+				Where("article_pictures.article_id = ? AND article_pictures.`order` = 0", article.ID).
+				First(&picture).Error; err == nil {
+				coverImageURL = picture.URL
+			}
+
+			// 检查当前用户是否点赞了这篇文章
+			var isLiked bool
+			if currentUserID != nil {
+				var likeCount int64
+				global.Db.Model(&models.Like{}).Where("user_id = ? AND article_id = ? AND deleted_at IS NULL", currentUserID, article.ID).Count(&likeCount)
+				isLiked = likeCount > 0
+			}
+
+			userFavoriteList = append(userFavoriteList, gin.H{
+				"id":         article.ID,
+				"title":      article.Title,
+				"cover_url":  coverImageURL,
+				"like_count": article.LikeCount,
+				"is_liked":   isLiked,
+			})
+		}
+	}
+
 	// 返回用户公开信息和统计数据
 	c.JSON(http.StatusOK, gin.H{
 		"user": gin.H{
@@ -264,12 +316,13 @@ func GetUserProfile(c *gin.Context) {
 			"avatar":          user.Avatar,
 			"gender":          user.Gender,
 			"created_at":      user.CreatedAt,
-			"following_count": user.FollowingCount,
-			"followers_count": user.FollowersCount,
-			"posts_count":     user.PostsCount,
+			"following_count": followingCount,
+			"followers_count": followerCount,
+			"posts_count":     articleCount,
 		},
-		"is_following":  isFollowing,
-		"user_articles": userArticleList,
+		"is_following":      isFollowing,
+		"user_articles":     userArticleList,
+		"favorite_articles": userFavoriteList,
 	})
 }
 

@@ -1,17 +1,18 @@
 package controllers
 
 import (
+	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/appabin/greenbook/global"
 	"github.com/appabin/greenbook/models"
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 )
 
 // UploadPictureRequest 上传图片请求
@@ -25,7 +26,7 @@ type UploadPictureResponse struct {
 	URL string `json:"url"`
 }
 
-// UploadPicture 上传图片
+// UploadPicture 上传图片到 MinIO
 func UploadPicture(c *gin.Context) {
 	var req UploadPictureRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,12 +38,31 @@ func UploadPicture(c *gin.Context) {
 
 	// 生成文件名
 	filename := fmt.Sprintf("%d_%d.jpg", userID, time.Now().Unix())
-	filePath := fmt.Sprintf("static/images/%s", filename)
+	// MinIO 对象名称
+	objectName := fmt.Sprintf("images/%s", filename)
+	// 返回的 URL 格式保持不变
 	url := fmt.Sprintf("/static/images/%s", filename)
 
-	// 解码并保存图片
-	if err := savePictureToFile(req.ImageData, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存图片失败: " + err.Error()})
+	// 解码 base64 数据
+	data, err := base64.StdEncoding.DecodeString(req.ImageData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的图片数据"})
+		return
+	}
+
+	// 上传到 MinIO
+	_, err = global.MinIOClient.PutObject(
+		context.Background(),
+		global.MinIOConf.BucketName,
+		objectName,
+		bytes.NewReader(data),
+		int64(len(data)),
+		minio.PutObjectOptions{
+			ContentType: "image/jpeg",
+		},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "上传图片失败: " + err.Error()})
 		return
 	}
 
@@ -63,7 +83,7 @@ func UploadPicture(c *gin.Context) {
 	})
 }
 
-// UploadPictureMultipart 支持multipart/form-data的图片上传
+// UploadPictureMultipart 支持multipart/form-data的图片上传到 MinIO
 func UploadPictureMultipart(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -74,21 +94,34 @@ func UploadPictureMultipart(c *gin.Context) {
 		return
 	}
 
-	// 生成文件名
-	filename := fmt.Sprintf("%d_%d_%s", userID, time.Now().Unix(), file.Filename)
-	filePath := fmt.Sprintf("static/images/%s", filename)
-	url := fmt.Sprintf("/static/images/%s", filename)
-
-	// 确保目录存在
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目录失败"})
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "打开文件失败"})
 		return
 	}
+	defer src.Close()
 
-	// 保存文件
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败: " + err.Error()})
+	// 生成文件名
+	filename := fmt.Sprintf("%d_%d_%s", userID, time.Now().Unix(), file.Filename)
+	// MinIO 对象名称
+	objectName := fmt.Sprintf("images/%s", filename)
+	// 返回的 URL 格式保持不变
+	url := fmt.Sprintf("/static/images/%s", filename)
+
+	// 上传到 MinIO
+	_, err = global.MinIOClient.PutObject(
+		context.Background(),
+		global.MinIOConf.BucketName,
+		objectName,
+		src,
+		file.Size,
+		minio.PutObjectOptions{
+			ContentType: file.Header.Get("Content-Type"),
+		},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "上传文件失败: " + err.Error()})
 		return
 	}
 
@@ -109,20 +142,41 @@ func UploadPictureMultipart(c *gin.Context) {
 	})
 }
 
-// savePictureToFile 保存图片数据到文件
-func savePictureToFile(base64Data, filePath string) error {
-	// 解码base64数据
-	data, err := base64.StdEncoding.DecodeString(base64Data)
+// ServeImageFromMinIO 从 MinIO 获取并返回图片
+func ServeImageFromMinIO(c *gin.Context) {
+	filename := c.Param("filename")
+	objectName := fmt.Sprintf("images/%s", filename)
+
+	// 从 MinIO 获取图片
+	object, err := global.MinIOClient.GetObject(
+		context.Background(),
+		global.MinIOConf.BucketName,
+		objectName,
+		minio.GetObjectOptions{},
+	)
 	if err != nil {
-		return err
+		c.Status(http.StatusNotFound)
+		return
+	}
+	defer object.Close()
+
+	// 获取对象信息
+	objInfo, err := object.Stat()
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
 	}
 
-	// 确保目录存在
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
+	// 设置响应头
+	c.Header("Content-Type", objInfo.ContentType)
+	c.Header("Content-Length", fmt.Sprintf("%d", objInfo.Size))
+	c.Header("Cache-Control", "public, max-age=31536000") // 1年缓存
+	c.Header("ETag", objInfo.ETag)
 
-	// 写入文件
-	return ioutil.WriteFile(filePath, data, 0644)
+	// 流式传输图片
+	_, err = io.Copy(c.Writer, object)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 }
