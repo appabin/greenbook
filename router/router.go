@@ -9,6 +9,9 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// 添加 CORS 中间件
+	r.Use(middlewares.CorsMiddleware())
+
 	// 图片代理服务（从 MinIO 获取图片）
 	r.GET("/static/images/:filename", controllers.ServeImageFromMinIO)
 	// 其他静态文件服务（如果需要）
